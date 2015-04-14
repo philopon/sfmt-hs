@@ -5,6 +5,7 @@ import System.Random.SFMT
 montePi :: Int -> GenIO -> IO Double
 montePi len gen = loop (0::Int) (0::Int)
   where
+    loop :: Int -> Int -> IO Double
     loop !i !cnt
         | i >= len  = return $ 4 * (fromIntegral cnt / fromIntegral len)
         | otherwise = do
