@@ -1,7 +1,7 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE CPP #-}
 
 module System.Random.SFMT
     ( -- * Gen
@@ -42,7 +42,7 @@ import Unsafe.Coerce
 import System.IO.Unsafe
 
 #if !MIN_VERSION_primitive(0,6,0)
-type PrimBase = PrimMonad
+#define PrimBase PrimMonad
 #endif
 
 newtype Gen s = Gen (ForeignPtr SFMT)
