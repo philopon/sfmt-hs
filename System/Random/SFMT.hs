@@ -53,13 +53,13 @@ getIDString :: Gen s -> IO String
 getIDString (Gen gen) = withForeignPtr gen $ \ptr ->
     sfmt_get_idstring ptr >>= peekCString
 
-initializeFromSeed :: PrimBase m => Int -> m (Gen (PrimState m))
+initializeFromSeed :: PrimMonad m => Int -> m (Gen (PrimState m))
 initializeFromSeed seed = unsafePrimToPrim $ do
     bytes <- mallocBytes sizeOfSFMT
     sfmt_init_gen_rand bytes (fromIntegral seed)
     Gen `liftM` newForeignPtr finalizerFree bytes
 
-create :: PrimBase m => m (Gen (PrimState m))
+create :: PrimMonad m => m (Gen (PrimState m))
 create = initializeFromSeed 0
 
 initialize :: (PrimMonad m, F.Foldable f) => f Word -> m (Gen (PrimState m))
