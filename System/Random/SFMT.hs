@@ -41,6 +41,10 @@ import Data.Bits
 import Unsafe.Coerce
 import System.IO.Unsafe
 
+#if !MIN_VERSION_primitive(0,6,0)
+type PrimBase = PrimMonad
+#endif
+
 newtype Gen s = Gen (ForeignPtr SFMT)
 instance Show (Gen s) where
     show = unsafePerformIO . getIDString
@@ -49,13 +53,13 @@ getIDString :: Gen s -> IO String
 getIDString (Gen gen) = withForeignPtr gen $ \ptr ->
     sfmt_get_idstring ptr >>= peekCString
 
-initializeFromSeed :: PrimMonad m => Int -> m (Gen (PrimState m))
+initializeFromSeed :: PrimBase m => Int -> m (Gen (PrimState m))
 initializeFromSeed seed = unsafePrimToPrim $ do
     bytes <- mallocBytes sizeOfSFMT
     sfmt_init_gen_rand bytes (fromIntegral seed)
     Gen `liftM` newForeignPtr finalizerFree bytes
 
-create :: PrimMonad m => m (Gen (PrimState m))
+create :: PrimBase m => m (Gen (PrimState m))
 create = initializeFromSeed 0
 
 initialize :: (PrimMonad m, F.Foldable f) => f Word -> m (Gen (PrimState m))
@@ -71,7 +75,7 @@ initializeFromByteString bs = unsafePrimToPrim . S.unsafeUseAsCStringLen bs $ \(
     sfmt_init_by_array bytes (castPtr ptr) (fromIntegral $ len `quot` 4)
     Gen `liftM` newForeignPtr finalizerFree bytes
 
-withSystemRandom :: PrimMonad m => (Gen (PrimState m) -> m a) -> IO a 
+withSystemRandom :: PrimBase m => (Gen (PrimState m) -> m a) -> IO a
 withSystemRandom m = do
     bs  <- getEntropy (constSFMT_N * 16)
     gen <- initializeFromByteString bs
@@ -83,10 +87,10 @@ createSystemRandom = withSystemRandom (return :: GenIO -> IO GenIO)
 type GenIO   = Gen (PrimState IO)
 type GenST s = Gen (PrimState (ST s))
 
-asGenIO :: (GenIO -> IO a) -> GenIO -> IO a 
+asGenIO :: (GenIO -> IO a) -> GenIO -> IO a
 asGenIO = id
 
-asGenST :: (GenST s -> ST s a) -> GenST s -> ST s a 
+asGenST :: (GenST s -> ST s a) -> GenST s -> ST s a
 asGenST = id
 
 genRand :: PrimMonad m => (Ptr SFMT -> IO a) -> Gen (PrimState m) -> m a
@@ -253,7 +257,7 @@ save :: PrimMonad m => Gen (PrimState m) -> m Seed
 save (Gen gen) = unsafePrimToPrim . withForeignPtr gen $ \ptr ->
     Seed `liftM` S.packCStringLen (castPtr ptr, sizeOfSFMT)
 
-restore :: PrimMonad m => Seed -> m (Gen (PrimState m)) 
+restore :: PrimMonad m => Seed -> m (Gen (PrimState m))
 restore (Seed bs) = unsafePrimToPrim . S.unsafeUseAsCString bs $ \ptr -> do
     bytes <- mallocBytes sizeOfSFMT
     copyBytes bytes (castPtr ptr) sizeOfSFMT
